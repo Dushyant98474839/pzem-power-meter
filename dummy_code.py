@@ -1,7 +1,7 @@
 import requests
 import time
 
-ESP_IP = "http://192.168.137.151"   #ESP32 IP
+ESP_IP = "http://192.168.24.159"   #ESP32 IP
 
 
 def start_measurement():
@@ -29,5 +29,6 @@ time.sleep(5)
 energy = stop_measurement()
 
 print("Energy used:", energy, "Wh")
+
 
 print("Current readings:", get_live_data())
