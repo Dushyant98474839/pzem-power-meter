@@ -11,11 +11,12 @@ WebServer server(80);
 
 float voltage = 0;
 float current = 0;
-float power = 0;
+double power = 0;
 
 bool measuring = false;
+int ms_epoch=0;
 
-float energyWh = 0;
+double total_power = 0;
 unsigned long lastSampleTime = 0;
 
 void handleRoot() {
@@ -60,8 +61,8 @@ void handleRoot() {
   }
 
   function start(){
-  fetch('/start');
-  }
+fetch('/start?epoch=200');
+}
 
   function stop(){
 
@@ -69,7 +70,7 @@ void handleRoot() {
   .then(response => response.json())
   .then(data => {
 
-  alert("Energy Used: " + data.energy_Wh + " Wh");
+  alert("Power: " + data.total_power + " W");
 
   });
 
@@ -88,20 +89,25 @@ void handleRoot() {
 
 void handleStart() {
 
-  energyWh = 0;
+  // energyWh = 0;
   measuring = true;
   lastSampleTime = millis();
-
+  if(server.hasArg("epoch")){
+    ms_epoch = server.arg("epoch").toInt();
+  }else{
+      ms_epoch = 200;
+  }
   server.send(200, "application/json",
               "{\"status\":\"measurement_started\"}");
 }
+
 
 void handleStop() {
 
   measuring = false;
 
   String response = "{";
-  response += "\"energy_Wh\":" + String(energyWh,6);
+  response += "\"total_power\":" + String(total_power,6);
   response += "}";
 
   server.send(200, "application/json", response);
@@ -113,7 +119,7 @@ void handleData() {
   json += "\"voltage\":" + String(voltage) + ",";
   json += "\"current\":" + String(current) + ",";
   json += "\"power\":" + String(power) + ",";
-  json += "\"energy_Wh\":" + String(energyWh,6);
+  json += "\"total_power\":" + String(total_power,6);
   json += "}";
 
   server.send(200, "application/json", json);
@@ -152,36 +158,47 @@ void setup() {
 
   server.begin();
 }
+
 void loop() {
 
   server.handleClient();
 
   voltage = pzem.voltage();
-  current = pzem.current();
-  power   = pzem.power();
+      current = pzem.current();
+      power   = pzem.power();
+  unsigned long now = millis();
 
-  if (!isnan(power)) {
+  unsigned long elapsedtime = now - lastSampleTime;
+  if (measuring && elapsedtime >= ms_epoch) {
 
-    if (measuring) {
-
-      unsigned long now = millis();
-      float dt = (now - lastSampleTime) / 1000.0;  // convert ms to seconds
-
-      energyWh += power * dt / 3600.0; //watthour calculation
-
+      float dt = elapsedtime / 1000.0;
       lastSampleTime = now;
-    }
-    Serial.print("Voltage: ");
-    Serial.println(voltage);
-    Serial.print("Current: ");
-    Serial.println(current);
-    
-    Serial.print("Power: ");
-    Serial.println(power);
-    Serial.print("Energy: ");
-    Serial.println(energyWh);
-    Serial.println(".........................................................................");
+
+      voltage = pzem.voltage();
+      current = pzem.current();
+      power   = pzem.power();
+
+      if(!isnan(power)){
+
+          
+
+          total_power += power;
+
+      }
+
+      Serial.print("Voltage: ");
+      Serial.println(voltage);
+
+      Serial.print("Current: ");
+      Serial.println(current);
+
+      Serial.print("Power: ");
+      Serial.println(power);
+
+      // Serial.print("Energy: ");
+      // Serial.println(energyWh);
+
+      Serial.println("------------------------------------------------");
   }
 
-  delay(500);
 }
