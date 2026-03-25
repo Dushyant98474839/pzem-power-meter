@@ -43,7 +43,7 @@
 
 ---
 
-## II. Code
+## II. Flash ESP32
 
 ### 1. Install ESP32 Board in Arduino IDE
 
